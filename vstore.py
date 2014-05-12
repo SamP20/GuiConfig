@@ -19,10 +19,12 @@ class VariableStore(dict):
         super(VariableStore, self).clear()
         self.bindings.clear()
         
-    def add_binding(self, key, binding):
+    def add_binding(self, key, binding, run=False):
         try:
             self.bindings[key].append(binding)
         except KeyError:
             self.bindings[key] = [binding]
+        if run:
+            binding(key, self[key])
 
 instance = VariableStore()

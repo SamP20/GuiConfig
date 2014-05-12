@@ -72,7 +72,7 @@ class MainFrame(wx.Frame):
             open_dir = os.path.dirname(dlg.GetPath())
             module = load_module(dlg.GetPath())
             vstore.instance.clear()
-            vstore.instance.update(module.load_defaults())
+            module.load_defaults()
             self.gui = module.load_gui()
             self.sizer.Clear(True)
             self.sizer.Add(self.gui.build_gui(self.panel), 1, wx.ALL|wx.EXPAND, 5)
