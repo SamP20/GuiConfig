@@ -57,7 +57,7 @@ class MainFrame(wx.Frame):
         return menuBar
         
     def on_open(self, event):
-        global open_dir
+        global open_dir, outputs
         wildcard = "Py files (*.py)|*.py|" \
            "All files (*.*)|*.*"
         dlg = wx.FileDialog(
@@ -120,17 +120,19 @@ class MainFrame(wx.Frame):
                 json.dump(vstore.instance, fp)
         
     def on_export(self, event):
-        global export_dir
-        dlg = wx.DirDialog(
-            self, message="Choose a directory",
-            defaultPath=export_dir,
-            style=wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST
-            )
+        global export_dir, outputs        
+        for output, contents in outputs.items():
+            print("saving", output)
+            dlg = wx.FileDialog(
+                self, message="Choose a file",
+                defaultDir=export_dir,
+                defaultFile=output,
+                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
+                )
             
-        if dlg.ShowModal() == wx.ID_OK:
-            export_dir = dlg.GetPath()
-            for output, contents in outputs.items():
-                filename = os.path.join(export_dir, output)
+            if dlg.ShowModal() == wx.ID_OK:
+                export_dir = os.path.dirname(dlg.GetPath())
+                filename = dlg.GetPath()
                 template = Templite(contents)
                 with open(filename, "w") as fh:
                     fh.write(template.render(vstore.instance))
