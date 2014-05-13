@@ -1,7 +1,7 @@
 import wx
 #import wx.lib.inspection
 import os
-import importlib.machinery
+import imp
 import json
 from templite import Templite
 
@@ -15,14 +15,13 @@ export_dir = os.path.expanduser("~")
 
 
 def load_module(path):
-    loader = importlib.machinery.SourceFileLoader("module.name", path)
-    return loader.load_module()
+    return imp.load_source(os.path.splitext(os.path.basename(path))[0], path)
 
 
 class MainFrame(wx.Frame):
     
     def __init__(self):
-        wx.Frame.__init__(self, None, title="PyConfig", size=(760, 470))      
+        wx.Frame.__init__(self, None, title="GuiConfig", size=(760, 470))      
         self.SetMenuBar(self.create_menu_bar())
         
         self.panel = wx.Panel(self)

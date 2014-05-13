@@ -3,7 +3,7 @@ class VariableStore(dict):
         self.bindings = dict()
         
     def __setitem__(self, key, value):
-        print("setting: ", key, value)
+        print "setting: ", key, value
         super(VariableStore, self).__setitem__(key, value)
         try:
             for binding in self.bindings[key]:

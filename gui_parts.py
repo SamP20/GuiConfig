@@ -132,7 +132,8 @@ class Tab(GenericPart):
             except:
                 pass
             root = self._treectrl.GetRootItem()
-            item = self._treectrl.AppendItem(root, child.title.value, iconIndex, iconIndex, control)
+            treeData = wx.TreeItemData(control)
+            item = self._treectrl.AppendItem(root, child.title.value, iconIndex, iconIndex, treeData)
             child.title.add_handler(lambda val: self._treectrl.SetItemText(item, val))
         return self._control
 
@@ -140,7 +141,7 @@ class Tab(GenericPart):
         root = self._treectrl.GetRootItem()
         (child, cookie) = self._treectrl.GetFirstChild(root)
         while child.IsOk():
-            control = self._treectrl.GetItemData(child)
+            control = self._treectrl.GetPyData(child)
             if child == event.GetItem():
                 control.Show()
             else:
