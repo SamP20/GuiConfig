@@ -27,6 +27,7 @@ class MainFrame(wx.Frame):
         self.panel = wx.Panel(self)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.panel.SetSizer(self.sizer)
+        self.sizer.Fit(self.panel)
         self.SetMinSize(self.GetSize())
         self.parent = None
         

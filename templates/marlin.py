@@ -6,22 +6,24 @@ def load_defaults():
         "MOTHERBOARD": 34,
         "BAUDRATE": 115200,
         "SERIAL_PORT": 0,
+        "BTENABLED": 0,
         "KINEMATIC_CONFIG": 0,
         "EXTRUDERS": 1,
-        "EXTRUDER_SEL": 1,
+        "EXTRUDER_SEL": 0,
     })
-    vstore.instance.add_binding("EXTRUDER_SEL", load_extruder, True) #Load defaults for selected extruder
+    vstore.instance.add_binding("EXTRUDERS", load_extruder, True) #Load defaults for selected extruder
     
 def load_extruder(key, id):
     vs = vstore.instance
-    #Don't overwrite if already defined
-    if "TEMP_SENSOR_%i"%id in vs:
-        return
-    vs.update({
-        "TEMP_SENSOR_%i"%id: -1,
-        "HEATER_%i_MINTEMP"%id: 5,
-        "HEATER_%i_MAXTEMP"%id: 275
-    })
+    for i in range(id):
+        #Don't overwrite if already defined
+        if "TEMP_SENSOR_%i"%i in vs:
+            continue
+        vs.update({
+            "TEMP_SENSOR_%i"%i: -1,
+            "HEATER_%i_MINTEMP"%i: 5,
+            "HEATER_%i_MAXTEMP"%i: 275
+        })
 
 def load_gui():
     nb = GP.Notebook()
@@ -134,7 +136,7 @@ def extruders_page():
     return GP.Page("Extruders and heating").add_children(
         GP.OptionsGroup("Extruders").add_children(
             GP.IntegerInput("Extruder count", "EXTRUDERS", min=1, max=3),
-            GP.IntegerInput("Selected extruder", "EXTRUDER_SEL", min=1, max=GP.Func(["EXTRUDERS"],lambda max: max)),
+            GP.IntegerInput("Selected extruder", "EXTRUDER_SEL", min=0, max=GP.Func(["EXTRUDERS"],lambda max: max-1)),
             GP.OptionsGroup(extruder_var("Extruder %i")).add_children(
                 GP.ChoiceInput("Sensor type", extruder_var("TEMP_SENSOR_%i"),
                                options=[
@@ -321,9 +323,9 @@ ${"//" if not BTENABLED else ""}$#define BTENABLED              // Enable BT int
 // 147 is Pt100 with 4k7 pullup
 // 110 is Pt100 with 1k pullup (non standard)
 
-#define TEMP_SENSOR_0 -1
-#define TEMP_SENSOR_1 -1
-#define TEMP_SENSOR_2 0
+${for i in range(EXTRUDERS):}$
+#define TEMP_SENSOR${i}$ ${locals()["TEMP_SENSOR_%i"%i]}$
+${:end-for}$
 #define TEMP_SENSOR_BED 0
 
 // This makes temp sensor 1 a redundant sensor for sensor 0. If the temperatures difference between these sensors is to high the print will be aborted.
