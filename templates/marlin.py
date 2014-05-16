@@ -13,8 +13,12 @@ def load_defaults():
         "TEMP_SENSOR": [],
         "HEATER_MINTEMP": [],
         "HEATER_MAXTEMP": [],
+        "TEMP_SENSOR_BED": -1,
+        "BED_MINTEMP": 5,
+        "BED_MAXTEMP": 150
     })
     vstore.instance.add_binding("EXTRUDERS", load_extruder, True) #Load defaults for selected extruder
+    
     
 def load_extruder(key, count):
     vs = vstore.instance
@@ -24,6 +28,7 @@ def load_extruder(key, count):
         vs["HEATER_MINTEMP"].append(5)
         vs["HEATER_MAXTEMP"].append(275)
 
+        
 def load_gui():
     nb = GP.Notebook()
     nb.add_children(
@@ -35,6 +40,7 @@ def load_gui():
         GP.Tab("Advanced")
     )
     return nb
+    
     
 def electronics_page():
     return GP.Page("Electronics").add_children(
@@ -97,6 +103,7 @@ def electronics_page():
         )
     )
     
+    
 def mechanics_page():
     return GP.Page("Mechanics").add_children(
         GP.OptionsGroup("Kinematics").add_children(
@@ -131,60 +138,69 @@ def mechanics_page():
         )
     )
 
+    
 def extruders_page():
     return GP.Page("Extruders and heating").add_children(
         GP.OptionsGroup("Extruders").add_children(
             GP.IntegerInput("Extruder count", "EXTRUDERS", min=1, max=3),
             GP.IntegerInput("Selected extruder", "EXTRUDER_SEL", min=0, max=GP.Func(["EXTRUDERS"],lambda max: max-1)),
             GP.OptionsGroup(GP.Func(["EXTRUDER_SEL"], lambda id: "Extruder %i"%id)).add_children(
-                GP.ChoiceInput("Sensor type", extruder_var("TEMP_SENSOR"),
-                               options=[
-                                   (-2, "thermocouple with MAX6675 (only for sensor 0)"),
-                                   (-1, "thermocouple with AD595"),
-                                   (0, "not used"),
-                                   (1, "100k thermistor - best choice for EPCOS 100k (4.7k pullup)"),
-                                   (2, "200k thermistor - ATC Semitec 204GT-2 (4.7k pullup)"),
-                                   (3, "Mendel-parts thermistor (4.7k pullup)"),
-                                   (4, "10k thermistor !! do not use it for a hotend. It gives bad resolution at high temp. !!"),
-                                   (5, "100K thermistor - ATC Semitec 104GT-2 (Used in ParCan & J-Head) (4.7k pullup)"),
-                                   (6, "100k EPCOS - Not as accurate as table 1 (created using a fluke thermocouple) (4.7k pullup)"),
-                                   (7, "100k Honeywell thermistor 135-104LAG-J01 (4.7k pullup)"),
-                                   (71, "100k Honeywell thermistor 135-104LAF-J01 (4.7k pullup)"),
-                                   (8, "100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup)"),
-                                   (9, "100k GE Sensing AL03006-58.2K-97-G1 (4.7k pullup)"),
-                                   (10, "100k RS thermistor 198-961 (4.7k pullup)"),
-                                   (11, "100k beta 3950 1% thermistor (4.7k pullup)"),
-                                   (12, "100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup) (calibrated for Makibox hot bed)"),
-                                   (20, "the PT100 circuit found in the Ultimainboard V2.x"),
-                                   (60, "100k Maker's Tool Works Kapton Bed Thermistor beta=3950"),
-                                   (51, "100k thermistor - EPCOS (1k pullup)"),
-                                   (52, "200k thermistor - ATC Semitec 204GT-2 (1k pullup)"),
-                                   (55, "100k thermistor - ATC Semitec 104GT-2 (Used in ParCan & J-Head) (1k pullup)"),
-                                   (1047, "Pt1000 with 4k7 pullup"),
-                                   (1010, "Pt1000 with 1k pullup (non standard)"),
-                                   (147, "Pt100 with 4k7 pullup"),
-                                   (110, "Pt100 with 1k pullup (non standard)"),
-                               ]),
-                GP.IntegerInput("Minimum operating temperature", extruder_var("HEATER_MINTEMP"), min=-100, max=100,
-                                tooltip="The minimal temperature defines the temperature below which the heater will not be enabled It is used "\
-                                        "to check that the wiring to the thermistor is not broken. "\
-                                        "Otherwise this would lead to the heater being powered on all the time."),
-                GP.IntegerInput("Maximum operating temperature", extruder_var("HEATER_MAXTEMP"), min=0, max=1000,
-                                tooltip="When temperature exceeds max temp, your heater will be switched off. "\
-                                        "This feature exists to protect your hotend from overheating accidentally, but *NOT* from thermistor short/failure! "\
-                                        "You should use MINTEMP for thermistor short/failure protection. ")
-            ),
+                *heater_options(extruder_var("TEMP_SENSOR"), extruder_var("HEATER_MINTEMP"), extruder_var("HEATER_MAXTEMP"))),
         ),
-        GP.OptionsGroup("Heated bed")
+        GP.OptionsGroup("Heated bed").add_children(*heater_options("TEMP_SENSOR_BED", "BED_MINTEMP", "BED_MAXTEMP"))
     )
+    
+    
+def heater_options(type_name, mintemp_name, maxtemp_name):
+    lst = []
+    lst.append(GP.ChoiceInput("Sensor type", type_name,
+                              options=[
+                                  (-2, "thermocouple with MAX6675 (only for sensor 0)"),
+                                  (-1, "thermocouple with AD595"),
+                                  (0, "not used"),
+                                  (1, "100k thermistor - best choice for EPCOS 100k (4.7k pullup)"),
+                                  (2, "200k thermistor - ATC Semitec 204GT-2 (4.7k pullup)"),
+                                  (3, "Mendel-parts thermistor (4.7k pullup)"),
+                                  (4, "10k thermistor !! do not use it for a hotend. It gives bad resolution at high temp. !!"),
+                                  (5, "100K thermistor - ATC Semitec 104GT-2 (Used in ParCan & J-Head) (4.7k pullup)"),
+                                  (6, "100k EPCOS - Not as accurate as table 1 (created using a fluke thermocouple) (4.7k pullup)"),
+                                  (7, "100k Honeywell thermistor 135-104LAG-J01 (4.7k pullup)"),
+                                  (71, "100k Honeywell thermistor 135-104LAF-J01 (4.7k pullup)"),
+                                  (8, "100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup)"),
+                                  (9, "100k GE Sensing AL03006-58.2K-97-G1 (4.7k pullup)"),
+                                  (10, "100k RS thermistor 198-961 (4.7k pullup)"),
+                                  (11, "100k beta 3950 1% thermistor (4.7k pullup)"),
+                                  (12, "100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup) (calibrated for Makibox hot bed)"),
+                                  (20, "the PT100 circuit found in the Ultimainboard V2.x"),
+                                  (60, "100k Maker's Tool Works Kapton Bed Thermistor beta=3950"),
+                                  (51, "100k thermistor - EPCOS (1k pullup)"),
+                                  (52, "200k thermistor - ATC Semitec 204GT-2 (1k pullup)"),
+                                  (55, "100k thermistor - ATC Semitec 104GT-2 (Used in ParCan & J-Head) (1k pullup)"),
+                                  (1047, "Pt1000 with 4k7 pullup"),
+                                  (1010, "Pt1000 with 1k pullup (non standard)"),
+                                  (147, "Pt100 with 4k7 pullup"),
+                                  (110, "Pt100 with 1k pullup (non standard)"),
+                              ]))
+    lst.append(GP.IntegerInput("Minimum operating temperature", mintemp_name, min=-100, max=100,
+                               tooltip="The minimal temperature defines the temperature below which the heater will not be enabled It is used "\
+                                       "to check that the wiring to the thermistor is not broken. "\
+                                       "Otherwise this would lead to the heater being powered on all the time."))
+    lst.append(GP.IntegerInput("Maximum operating temperature", maxtemp_name, min=0, max=1000,
+                               tooltip="When temperature exceeds max temp, your heater will be switched off. "\
+                                       "This feature exists to protect your hotend from overheating accidentally, but *NOT* from thermistor short/failure! "\
+                                       "You should use MINTEMP for thermistor short/failure protection. "))
+    return lst
+
     
 def extruder_var(name):
     return GP.Func(["EXTRUDER_SEL"], lambda id: (name, id))
+    
     
 def load_outputs():
     return {
         "configuration.h": load_config_h()
     }
+    
     
 def load_config_h():
     return """
@@ -325,7 +341,7 @@ ${"//" if not BTENABLED else ""}$#define BTENABLED              // Enable BT int
 ${for i in range(EXTRUDERS):}$
 #define TEMP_SENSOR_${i}$ ${TEMP_SENSOR[i]}$
 ${:end-for}$
-#define TEMP_SENSOR_BED 0
+#define TEMP_SENSOR_BED ${TEMP_SENSOR_BED}$
 
 // This makes temp sensor 1 a redundant sensor for sensor 0. If the temperatures difference between these sensors is to high the print will be aborted.
 //#define TEMP_SENSOR_1_AS_REDUNDANT
@@ -342,7 +358,7 @@ ${:end-for}$
 ${for i in range(EXTRUDERS):}$
 #define HEATER_${i}$_MINTEMP ${HEATER_MINTEMP[i]}$
 ${:end-for}$
-#define BED_MINTEMP 5
+#define BED_MINTEMP ${BED_MINTEMP}$
 
 // When temperature exceeds max temp, your heater will be switched off.
 // This feature exists to protect your hotend from overheating accidentally, but *NOT* from thermistor short/failure!
@@ -350,7 +366,7 @@ ${:end-for}$
 ${for i in range(EXTRUDERS):}$
 #define HEATER_${i}$_MAXTEMP ${HEATER_MAXTEMP[i]}$
 ${:end-for}$
-#define BED_MAXTEMP 150
+#define BED_MAXTEMP ${BED_MAXTEMP}$
 
 // If your bed has low resistance e.g. .6 ohm and throws the fuse you can duty cycle it to reduce the
 // average current. The value should be an integer and the heat bed will be turned on for 1 interval of
