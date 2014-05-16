@@ -422,6 +422,6 @@ class CheckInput(GenericPart):
     def refresh(self, val=None):
         try:
             if val is None: val = self.name.value
-            self._input.Setvalue(vstore.instance.getr(val))
+            self._input.SetValue(vstore.instance.getr(val))
         except KeyError:
             pass

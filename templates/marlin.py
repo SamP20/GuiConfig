@@ -10,20 +10,19 @@ def load_defaults():
         "KINEMATIC_CONFIG": 0,
         "EXTRUDERS": 1,
         "EXTRUDER_SEL": 0,
+        "TEMP_SENSOR": [],
+        "HEATER_MINTEMP": [],
+        "HEATER_MAXTEMP": [],
     })
     vstore.instance.add_binding("EXTRUDERS", load_extruder, True) #Load defaults for selected extruder
     
-def load_extruder(key, id):
+def load_extruder(key, count):
     vs = vstore.instance
-    for i in range(id):
-        #Don't overwrite if already defined
-        if "TEMP_SENSOR_%i"%i in vs:
-            continue
-        vs.update({
-            "TEMP_SENSOR_%i"%i: -1,
-            "HEATER_%i_MINTEMP"%i: 5,
-            "HEATER_%i_MAXTEMP"%i: 275
-        })
+    
+    for i in range(count-len(vs["TEMP_SENSOR"])):
+        vs["TEMP_SENSOR"].append(-1)
+        vs["HEATER_MINTEMP"].append(5)
+        vs["HEATER_MAXTEMP"].append(275)
 
 def load_gui():
     nb = GP.Notebook()
@@ -137,8 +136,8 @@ def extruders_page():
         GP.OptionsGroup("Extruders").add_children(
             GP.IntegerInput("Extruder count", "EXTRUDERS", min=1, max=3),
             GP.IntegerInput("Selected extruder", "EXTRUDER_SEL", min=0, max=GP.Func(["EXTRUDERS"],lambda max: max-1)),
-            GP.OptionsGroup(extruder_var("Extruder %i")).add_children(
-                GP.ChoiceInput("Sensor type", extruder_var("TEMP_SENSOR_%i"),
+            GP.OptionsGroup(GP.Func(["EXTRUDER_SEL"], lambda id: "Extruder %i"%id)).add_children(
+                GP.ChoiceInput("Sensor type", extruder_var("TEMP_SENSOR"),
                                options=[
                                    (-2, "thermocouple with MAX6675 (only for sensor 0)"),
                                    (-1, "thermocouple with AD595"),
@@ -166,11 +165,11 @@ def extruders_page():
                                    (147, "Pt100 with 4k7 pullup"),
                                    (110, "Pt100 with 1k pullup (non standard)"),
                                ]),
-                GP.IntegerInput("Minimum operating temperature", extruder_var("HEATER_%i_MINTEMP"), min=-100, max=100,
+                GP.IntegerInput("Minimum operating temperature", extruder_var("HEATER_MINTEMP"), min=-100, max=100,
                                 tooltip="The minimal temperature defines the temperature below which the heater will not be enabled It is used "\
                                         "to check that the wiring to the thermistor is not broken. "\
                                         "Otherwise this would lead to the heater being powered on all the time."),
-                GP.IntegerInput("Maximum operating temperature", extruder_var("HEATER_%i_MAXTEMP"), min=0, max=1000,
+                GP.IntegerInput("Maximum operating temperature", extruder_var("HEATER_MAXTEMP"), min=0, max=1000,
                                 tooltip="When temperature exceeds max temp, your heater will be switched off. "\
                                         "This feature exists to protect your hotend from overheating accidentally, but *NOT* from thermistor short/failure! "\
                                         "You should use MINTEMP for thermistor short/failure protection. ")
@@ -180,7 +179,7 @@ def extruders_page():
     )
     
 def extruder_var(name):
-    return GP.Func(["EXTRUDER_SEL"], lambda id: name % id)
+    return GP.Func(["EXTRUDER_SEL"], lambda id: (name, id))
     
 def load_outputs():
     return {
@@ -324,7 +323,7 @@ ${"//" if not BTENABLED else ""}$#define BTENABLED              // Enable BT int
 // 110 is Pt100 with 1k pullup (non standard)
 
 ${for i in range(EXTRUDERS):}$
-#define TEMP_SENSOR${i}$ ${locals()["TEMP_SENSOR_%i"%i]}$
+#define TEMP_SENSOR_${i}$ ${TEMP_SENSOR[i]}$
 ${:end-for}$
 #define TEMP_SENSOR_BED 0
 
@@ -340,17 +339,17 @@ ${:end-for}$
 // The minimal temperature defines the temperature below which the heater will not be enabled It is used
 // to check that the wiring to the thermistor is not broken.
 // Otherwise this would lead to the heater being powered on all the time.
-#define HEATER_0_MINTEMP 5
-#define HEATER_1_MINTEMP 5
-#define HEATER_2_MINTEMP 5
+${for i in range(EXTRUDERS):}$
+#define HEATER_${i}$_MINTEMP ${HEATER_MINTEMP[i]}$
+${:end-for}$
 #define BED_MINTEMP 5
 
 // When temperature exceeds max temp, your heater will be switched off.
 // This feature exists to protect your hotend from overheating accidentally, but *NOT* from thermistor short/failure!
 // You should use MINTEMP for thermistor short/failure protection.
-#define HEATER_0_MAXTEMP 275
-#define HEATER_1_MAXTEMP 275
-#define HEATER_2_MAXTEMP 275
+${for i in range(EXTRUDERS):}$
+#define HEATER_${i}$_MAXTEMP ${HEATER_MAXTEMP[i]}$
+${:end-for}$
 #define BED_MAXTEMP 150
 
 // If your bed has low resistance e.g. .6 ohm and throws the fuse you can duty cycle it to reduce the
