@@ -232,12 +232,12 @@ class TextInput(GenericPart):
         return self._sizer
 
     def on_value_changed(self, event):
-        vstore.instance[self.name.value] = self._input.GetValue()
+        vstore.instance.setr(self.name.value, self._input.GetValue())
 
     def refresh(self, val=None):
         try:
             if val is None: val = self.name.value
-            self._input.ChangeValue(vstore.instance[val])
+            self._input.ChangeValue(vstore.instance.getr(val))
         except KeyError:
             pass
 
@@ -284,12 +284,12 @@ class IntegerInput(GenericPart):
         self.on_value_changed(None)
 
     def on_value_changed(self, event):
-        vstore.instance[self.name.value] = self._input.GetValue()
+        vstore.instance.setr(self.name.value, self._input.GetValue())
 
     def refresh(self, val=None):
         try:
             if val is None: val = self.name.value
-            self._input.SetValue(vstore.instance[val])
+            self._input.SetValue(vstore.instance.getr(val))
         except KeyError:
             pass
 
@@ -337,12 +337,12 @@ class RealInput(GenericPart):
         self.on_value_changed(None)
 
     def on_value_changed(self, event):
-        vstore.instance[self.name.value] = self._input.GetValue()
+        vstore.instance.setr(self.name.value, self._input.GetValue())
 
     def refresh(self, val=None):
         try:
             if val is None: val = self.name.value
-            self._input.SetValue(vstore.instance[val])
+            self._input.SetValue(vstore.instance.getr(val))
         except KeyError:
             pass
 
@@ -382,12 +382,12 @@ class ChoiceInput(GenericPart):
         self._input.InsertItems([obj[1] for obj in options], pos=0)
 
     def on_value_changed(self, event):
-        vstore.instance[self.name.value] = self._optionids[self._input.GetSelection()]
+        vstore.instance.setr(self.name.value, self._optionids[self._input.GetSelection()])
 
     def refresh(self, val=None):
         try:
             if val is None: val = self.name.value
-            self._input.SetSelection(self._optionids.index(vstore.instance[val]))
+            self._input.SetSelection(self._optionids.index(vstore.instance.getr(val)))
         except KeyError:
             pass
             
@@ -417,11 +417,11 @@ class CheckInput(GenericPart):
         return self._sizer
 
     def on_value_changed(self, event):
-        vstore.instance[self.name.value] = self._input.GetValue()
+        vstore.instance.setr(self.name.value, self._input.GetValue())
 
     def refresh(self, val=None):
         try:
             if val is None: val = self.name.value
-            self._input.SetValue(vstore.instance[val])
+            self._input.Setvalue(vstore.instance.getr(val))
         except KeyError:
             pass
