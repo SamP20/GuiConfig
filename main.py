@@ -133,9 +133,13 @@ class MainFrame(wx.Frame):
             if dlg.ShowModal() == wx.ID_OK:
                 export_dir = os.path.dirname(dlg.GetPath())
                 filename = dlg.GetPath()
-                template = Templite(contents)
+                template = Templite(contents)                
+                def cbool(bool):
+                    return str(bool).lower()
+                def comment(bool):
+                    return "" if bool else "//"
                 with open(filename, "w") as fh:
-                    fh.write(template.render(vstore.instance))
+                    fh.write(template.render(vstore.instance, cbool=cbool, comment=comment))
     
     def on_close(self, event):
         self.Destroy()

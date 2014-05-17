@@ -1,32 +1,83 @@
-import gui_parts as GP
+﻿import gui_parts as GP
 import vstore
 
 def load_defaults():
+    #Electronics
     vstore.instance.update({
         "MOTHERBOARD": 34,
         "BAUDRATE": 115200,
         "SERIAL_PORT": 0,
         "BTENABLED": 0,
+    })
+    #Axes
+    vstore.instance.update({
         "KINEMATIC_CONFIG": 0,
+        "X_MIN_POS": 0,
+        "X_MAX_POS": 205,
+        "Y_MIN_POS": 0,
+        "Y_MAX_POS": 205,
+        "Z_MIN_POS": 0,
+        "Z_MAX_POS": 200,
+        "INVERT_X_DIR": False,
+        "INVERT_Y_DIR": False,
+        "INVERT_Z_DIR": False,
+        "DISABLE_X": False,
+        "DISABLE_Y": False,
+        "DISABLE_Z": False,
+        "X_ENABLE_ON": False,
+        "Y_ENABLE_ON": False,
+        "Z_ENABLE_ON": False
+    })
+    #Endstops
+    vstore.instance.update({
+        "ENDSTOPPULLUP_XMAX": True,
+        "ENDSTOPPULLUP_YMAX": True,
+        "ENDSTOPPULLUP_ZMAX": True,                          
+        "ENDSTOPPULLUP_XMIN": True,
+        "ENDSTOPPULLUP_YMIN": True,
+        "ENDSTOPPULLUP_ZMIN": True,
+        "X_MAX_ENDSTOP_INVERTING": True,
+        "Y_MAX_ENDSTOP_INVERTING": True,
+        "Z_MAX_ENDSTOP_INVERTING": True,
+        "X_MIN_ENDSTOP_INVERTING": True,
+        "Y_MIN_ENDSTOP_INVERTING": True,
+        "Z_MIN_ENDSTOP_INVERTING": True,
+        "X_HOME_DIR": False,
+        "Y_HOME_DIR": False,
+        "Z_HOME_DIR": False,
+        "MIN_SOFTWARE_ENDSTOPS": True,
+        "MAX_SOFTWARE_ENDSTOPS": True
+    })
+    #Extruders
+    vstore.instance.update({
         "EXTRUDERS": 1,
         "EXTRUDER_SEL": 0,
         "TEMP_SENSOR": [],
         "HEATER_MINTEMP": [],
         "HEATER_MAXTEMP": [],
+        "INVERT_E_DIR": [],
+        "E_STEPS_PER_MM": [],
+    })
+    
+    #Heated bed
+    vstore.instance.update({
         "TEMP_SENSOR_BED": -1,
         "BED_MINTEMP": 5,
-        "BED_MAXTEMP": 150
+        "BED_MAXTEMP": 150,
     })
+    
     vstore.instance.add_binding("EXTRUDERS", load_extruder, True) #Load defaults for selected extruder
     
     
 def load_extruder(key, count):
     vs = vstore.instance
-    
+
     for i in range(count-len(vs["TEMP_SENSOR"])):
         vs["TEMP_SENSOR"].append(-1)
         vs["HEATER_MINTEMP"].append(5)
         vs["HEATER_MAXTEMP"].append(275)
+        vs["INVERT_E_DIR"].append(False)
+        vs["E_STEPS_PER_MM"].append(836.0)
 
         
 def load_gui():
@@ -34,8 +85,10 @@ def load_gui():
     nb.add_children(
         GP.Tab("General").add_children(
             electronics_page(),
-            mechanics_page(),
+            axes_page(),
+            endstops_page(),
             extruders_page(),
+            heated_bed_page(),
         ),
         GP.Tab("Advanced")
     )
@@ -104,8 +157,8 @@ def electronics_page():
     )
     
     
-def mechanics_page():
-    return GP.Page("Mechanics").add_children(
+def axes_page():
+    return GP.Page("Axes").add_children(
         GP.OptionsGroup("Kinematics").add_children(
             GP.ChoiceInput("Kinematic Configuration", "KINEMATIC_CONFIG",
                            tooltip="Select the kinematic layout of your printer",
@@ -114,16 +167,18 @@ def mechanics_page():
                                (1,"CoreXY")
                            ])
         ),
-        GP.OptionsGroup("Axes").add_children(
+        GP.OptionsGroup("Axis limits").add_children(
             GP.IntegerInput("Min X", "X_MIN_POS", min=0, max=1000, label="mm"),
             GP.IntegerInput("Max X", "X_MAX_POS", min=0, max=1000, label="mm"),                                
             GP.IntegerInput("Min Y", "Y_MIN_POS", min=0, max=1000, label="mm"),
             GP.IntegerInput("Max Y", "Y_MAX_POS", min=0, max=1000, label="mm"),                                
             GP.IntegerInput("Min Z", "Z_MIN_POS", min=0, max=1000, label="mm"),
-            GP.IntegerInput("Max Z", "Z_MAX_POS", min=0, max=1000, label="mm"),
+            GP.IntegerInput("Max Z", "Z_MAX_POS", min=0, max=1000, label="mm"),                      
+        ),
+        GP.OptionsGroup("Axis inversion").add_children(
             GP.CheckInput("Invert X", "INVERT_X_DIR"),
             GP.CheckInput("Invert Y", "INVERT_Y_DIR"),
-            GP.CheckInput("Invert Z", "INVERT_Z_DIR"),            
+            GP.CheckInput("Invert Z", "INVERT_Z_DIR"),
         ),
         GP.OptionsGroup("Axis sleep").add_children(
             GP.CheckInput("Disable X", "DISABLE_X", tooltip="Disable X axis when not in use"),
@@ -132,64 +187,116 @@ def mechanics_page():
             GP.CheckInput("X enable on", "X_ENABLE_ON", tooltip="For Inverting Stepper Enable Pins (Active Low) use False, Non Inverting (Active High) use True"),
             GP.CheckInput("Y enable on", "Y_ENABLE_ON", tooltip="For Inverting Stepper Enable Pins (Active Low) use False, Non Inverting (Active High) use True"),
             GP.CheckInput("Z enable on", "Z_ENABLE_ON", tooltip="For Inverting Stepper Enable Pins (Active Low) use False, Non Inverting (Active High) use True"),
-        ),
-        GP.OptionsGroup("Endstops").add_children(
-            
         )
     )
-
     
-def extruders_page():
-    return GP.Page("Extruders and heating").add_children(
-        GP.OptionsGroup("Extruders").add_children(
-            GP.IntegerInput("Extruder count", "EXTRUDERS", min=1, max=3),
-            GP.IntegerInput("Selected extruder", "EXTRUDER_SEL", min=0, max=GP.Func(["EXTRUDERS"],lambda max: max-1)),
-            GP.OptionsGroup(GP.Func(["EXTRUDER_SEL"], lambda id: "Extruder %i"%id)).add_children(
-                *heater_options(extruder_var("TEMP_SENSOR"), extruder_var("HEATER_MINTEMP"), extruder_var("HEATER_MAXTEMP"))),
+
+def endstops_page():
+    return GP.Page("Endstops").add_children(
+        GP.OptionsGroup("Pullups").add_children(
+            GP.CheckInput("X Max pullup", "ENDSTOPPULLUP_XMAX", tooltip="Enable X Max limit switch pullup"),
+            GP.CheckInput("Y Max pullup", "ENDSTOPPULLUP_YMAX", tooltip="Enable Y Max limit switch pullup"),
+            GP.CheckInput("Z Max pullup", "ENDSTOPPULLUP_ZMAX", tooltip="Enable Z Max limit switch pullup"),
+            
+            GP.CheckInput("X Min pullup", "ENDSTOPPULLUP_XMIN", tooltip="Enable X Min limit switch pullup"),
+            GP.CheckInput("Y Min pullup", "ENDSTOPPULLUP_YMIN", tooltip="Enable Y Min limit switch pullup"),
+            GP.CheckInput("Z Min pullup", "ENDSTOPPULLUP_ZMIN", tooltip="Enable Z Min limit switch pullup"),
         ),
-        GP.OptionsGroup("Heated bed").add_children(*heater_options("TEMP_SENSOR_BED", "BED_MINTEMP", "BED_MAXTEMP"))
+        GP.OptionsGroup("Logic inversion").add_children(
+            GP.CheckInput("X Max inverting", "X_MAX_ENDSTOP_INVERTING", tooltip="Invert X Max limit switch"),
+            GP.CheckInput("Y Max inverting", "Y_MAX_ENDSTOP_INVERTING", tooltip="Invert Y Max limit switch"),
+            GP.CheckInput("Z Max inverting", "Z_MAX_ENDSTOP_INVERTING", tooltip="Invert Z Max limit switch"),
+            
+            GP.CheckInput("X Min inverting", "X_MIN_ENDSTOP_INVERTING", tooltip="Invert X Min limit switch"),
+            GP.CheckInput("Y Min inverting", "Y_MIN_ENDSTOP_INVERTING", tooltip="Invert Y Min limit switch"),
+            GP.CheckInput("Z Min inverting", "Z_MIN_ENDSTOP_INVERTING", tooltip="Invert Z Min limit switch"),
+        ),
+        GP.OptionsGroup("Home direction").add_children(
+            GP.CheckInput("X home direction (unchecked=min, checked=max)", "X_HOME_DIR", tooltip="Sets direction of endstops when homing; checked=MAX, unchecked=MIN"),
+            GP.CheckInput("Y home direction (unchecked=min, checked=max)", "Y_HOME_DIR", tooltip="Sets direction of endstops when homing; checked=MAX, unchecked=MIN"),
+            GP.CheckInput("Z home direction (unchecked=min, checked=max)", "Z_HOME_DIR", tooltip="Sets direction of endstops when homing; checked=MAX, unchecked=MIN"),
+        ),
+        GP.OptionsGroup("Software endstops").add_children(
+            GP.CheckInput("Min software endstops", "MIN_SOFTWARE_ENDSTOPS", tooltip="If true, axis won't move to coordinates less than HOME_POS"),
+            GP.CheckInput("Max software endstops", "MAX_SOFTWARE_ENDSTOPS", tooltip="If true, axis won't move to coordinates greater than the axis lengths (See Axes page)"),
+        )
     )
     
     
-def heater_options(type_name, mintemp_name, maxtemp_name):
-    lst = []
-    lst.append(GP.ChoiceInput("Sensor type", type_name,
-                              options=[
-                                  (-2, "thermocouple with MAX6675 (only for sensor 0)"),
-                                  (-1, "thermocouple with AD595"),
-                                  (0, "not used"),
-                                  (1, "100k thermistor - best choice for EPCOS 100k (4.7k pullup)"),
-                                  (2, "200k thermistor - ATC Semitec 204GT-2 (4.7k pullup)"),
-                                  (3, "Mendel-parts thermistor (4.7k pullup)"),
-                                  (4, "10k thermistor !! do not use it for a hotend. It gives bad resolution at high temp. !!"),
-                                  (5, "100K thermistor - ATC Semitec 104GT-2 (Used in ParCan & J-Head) (4.7k pullup)"),
-                                  (6, "100k EPCOS - Not as accurate as table 1 (created using a fluke thermocouple) (4.7k pullup)"),
-                                  (7, "100k Honeywell thermistor 135-104LAG-J01 (4.7k pullup)"),
-                                  (71, "100k Honeywell thermistor 135-104LAF-J01 (4.7k pullup)"),
-                                  (8, "100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup)"),
-                                  (9, "100k GE Sensing AL03006-58.2K-97-G1 (4.7k pullup)"),
-                                  (10, "100k RS thermistor 198-961 (4.7k pullup)"),
-                                  (11, "100k beta 3950 1% thermistor (4.7k pullup)"),
-                                  (12, "100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup) (calibrated for Makibox hot bed)"),
-                                  (20, "the PT100 circuit found in the Ultimainboard V2.x"),
-                                  (60, "100k Maker's Tool Works Kapton Bed Thermistor beta=3950"),
-                                  (51, "100k thermistor - EPCOS (1k pullup)"),
-                                  (52, "200k thermistor - ATC Semitec 204GT-2 (1k pullup)"),
-                                  (55, "100k thermistor - ATC Semitec 104GT-2 (Used in ParCan & J-Head) (1k pullup)"),
-                                  (1047, "Pt1000 with 4k7 pullup"),
-                                  (1010, "Pt1000 with 1k pullup (non standard)"),
-                                  (147, "Pt100 with 4k7 pullup"),
-                                  (110, "Pt100 with 1k pullup (non standard)"),
-                              ]))
-    lst.append(GP.IntegerInput("Minimum operating temperature", mintemp_name, min=-100, max=100,
-                               tooltip="The minimal temperature defines the temperature below which the heater will not be enabled It is used "\
-                                       "to check that the wiring to the thermistor is not broken. "\
-                                       "Otherwise this would lead to the heater being powered on all the time."))
-    lst.append(GP.IntegerInput("Maximum operating temperature", maxtemp_name, min=0, max=1000,
-                               tooltip="When temperature exceeds max temp, your heater will be switched off. "\
-                                       "This feature exists to protect your hotend from overheating accidentally, but *NOT* from thermistor short/failure! "\
-                                       "You should use MINTEMP for thermistor short/failure protection. "))
-    return lst
+def extruders_page():
+    return GP.Page("Extruders").add_children(
+        GP.OptionsGroup("Extruder count").add_children(
+            GP.IntegerInput("Extruder count", "EXTRUDERS", min=1, max=3),
+        ),        
+        GP.OptionsGroup(GP.Func(["EXTRUDER_SEL"], lambda id: "Extruder %i"%id)).add_children(
+            GP.IntegerInput("Selected extruder", "EXTRUDER_SEL", min=0, max=GP.Func(["EXTRUDERS"],lambda max: max-1),
+                            tooltip="This selects which extruder settings to modify"),
+            GP.OptionsGroup("Temperature control").add_children(
+                sensor_type_input(extruder_var("TEMP_SENSOR")),
+                mintemp_input(extruder_var("HEATER_MINTEMP")),
+                maxtemp_input(extruder_var("HEATER_MAXTEMP")),
+            ),
+            GP.OptionsGroup("Extruder motor").add_children(
+                GP.RealInput("Steps per mm", extruder_var("E_STEPS_PER_MM"), min=0.0, max=1000.0),
+                GP.CheckInput("Invert extruder direction", extruder_var("INVERT_E_DIR"))
+            )
+        ),
+    )
+    
+    
+def heated_bed_page():
+    return GP.Page("Heated Bed").add_children(
+        GP.OptionsGroup("Sensor type and limits").add_children(
+            sensor_type_input("TEMP_SENSOR_BED"),
+            mintemp_input("BED_MINTEMP"),
+            maxtemp_input("BED_MAXTEMP"),
+        )        
+    )
+    
+    
+def sensor_type_input(type_name):
+    return GP.ChoiceInput("Sensor type", type_name,
+                          options=[
+                              (-2, "thermocouple with MAX6675 (only for sensor 0)"),
+                              (-1, "thermocouple with AD595"),
+                              (0, "not used"),
+                              (1, "100k thermistor - best choice for EPCOS 100k (4.7k pullup)"),
+                              (2, "200k thermistor - ATC Semitec 204GT-2 (4.7k pullup)"),
+                              (3, "Mendel-parts thermistor (4.7k pullup)"),
+                              (4, "10k thermistor !! do not use it for a hotend. It gives bad resolution at high temp. !!"),
+                              (5, "100K thermistor - ATC Semitec 104GT-2 (Used in ParCan & J-Head) (4.7k pullup)"),
+                              (6, "100k EPCOS - Not as accurate as table 1 (created using a fluke thermocouple) (4.7k pullup)"),
+                              (7, "100k Honeywell thermistor 135-104LAG-J01 (4.7k pullup)"),
+                              (71, "100k Honeywell thermistor 135-104LAF-J01 (4.7k pullup)"),
+                              (8, "100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup)"),
+                              (9, "100k GE Sensing AL03006-58.2K-97-G1 (4.7k pullup)"),
+                              (10, "100k RS thermistor 198-961 (4.7k pullup)"),
+                              (11, "100k beta 3950 1% thermistor (4.7k pullup)"),
+                              (12, "100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup) (calibrated for Makibox hot bed)"),
+                              (20, "the PT100 circuit found in the Ultimainboard V2.x"),
+                              (60, "100k Maker's Tool Works Kapton Bed Thermistor beta=3950"),
+                              (51, "100k thermistor - EPCOS (1k pullup)"),
+                              (52, "200k thermistor - ATC Semitec 204GT-2 (1k pullup)"),
+                              (55, "100k thermistor - ATC Semitec 104GT-2 (Used in ParCan & J-Head) (1k pullup)"),
+                              (1047, "Pt1000 with 4k7 pullup"),
+                              (1010, "Pt1000 with 1k pullup (non standard)"),
+                              (147, "Pt100 with 4k7 pullup"),
+                              (110, "Pt100 with 1k pullup (non standard)"),
+                          ])
+                          
+                          
+def mintemp_input(mintemp_name):
+    return GP.IntegerInput("Minimum operating temperature", mintemp_name, min=-100, max=100,
+                           tooltip="The minimal temperature defines the temperature below which the heater will not be enabled It is used "\
+                                   "to check that the wiring to the thermistor is not broken. "\
+                                   "Otherwise this would lead to the heater being powered on all the time.")
+
+                                   
+def maxtemp_input(maxtemp_name):
+    return GP.IntegerInput("Maximum operating temperature", maxtemp_name, min=0, max=1000,
+                           tooltip="When temperature exceeds max temp, your heater will be switched off. "\
+                                   "This feature exists to protect your hotend from overheating accidentally, but *NOT* from thermistor short/failure! "\
+                                   "You should use MINTEMP for thermistor short/failure protection. ")
 
     
 def extruder_var(name):
@@ -234,7 +341,7 @@ def load_config_h():
 #define BAUDRATE ${BAUDRATE}$
 
 // This enables the serial port associated to the Bluetooth interface
-${"//" if not BTENABLED else ""}$#define BTENABLED              // Enable BT interface on AT90USB devices
+${emit(comment(BTENABLED))}$#define BTENABLED              // Enable BT interface on AT90USB devices
 
 
 //// The following define selects which electronics board you have. Please choose the one that matches your setup
@@ -338,9 +445,9 @@ ${"//" if not BTENABLED else ""}$#define BTENABLED              // Enable BT int
 // 147 is Pt100 with 4k7 pullup
 // 110 is Pt100 with 1k pullup (non standard)
 
-${for i in range(EXTRUDERS):}$
-#define TEMP_SENSOR_${i}$ ${TEMP_SENSOR[i]}$
+${for i in range(EXTRUDERS):}$ #define TEMP_SENSOR_${i}$ ${TEMP_SENSOR[i]}$
 ${:end-for}$
+
 #define TEMP_SENSOR_BED ${TEMP_SENSOR_BED}$
 
 // This makes temp sensor 1 a redundant sensor for sensor 0. If the temperatures difference between these sensors is to high the print will be aborted.
@@ -348,24 +455,24 @@ ${:end-for}$
 #define MAX_REDUNDANT_TEMP_SENSOR_DIFF 10
 
 // Actual temperature must be close to target for this long before M109 returns success
-#define TEMP_RESIDENCY_TIME 10  // (seconds)
-#define TEMP_HYSTERESIS 3       // (degC) range of +/- temperatures considered "close" to the target one
-#define TEMP_WINDOW     1       // (degC) Window around target to start the residency timer x degC early.
+#define TEMP_RESIDENCY_TIME 10 // (seconds)
+#define TEMP_HYSTERESIS 3 // (degC) range of +/- temperatures considered "close" to the target one
+#define TEMP_WINDOW 1 // (degC) Window around target to start the residency timer x degC early.
 
 // The minimal temperature defines the temperature below which the heater will not be enabled It is used
 // to check that the wiring to the thermistor is not broken.
 // Otherwise this would lead to the heater being powered on all the time.
-${for i in range(EXTRUDERS):}$
-#define HEATER_${i}$_MINTEMP ${HEATER_MINTEMP[i]}$
+${for i in range(EXTRUDERS):}$ #define HEATER_${i}$_MINTEMP ${HEATER_MINTEMP[i]}$
 ${:end-for}$
+
 #define BED_MINTEMP ${BED_MINTEMP}$
 
 // When temperature exceeds max temp, your heater will be switched off.
 // This feature exists to protect your hotend from overheating accidentally, but *NOT* from thermistor short/failure!
 // You should use MINTEMP for thermistor short/failure protection.
-${for i in range(EXTRUDERS):}$
-#define HEATER_${i}$_MAXTEMP ${HEATER_MAXTEMP[i]}$
+${for i in range(EXTRUDERS):}$ #define HEATER_${i}$_MAXTEMP ${HEATER_MAXTEMP[i]}$
 ${:end-for}$
+
 #define BED_MAXTEMP ${BED_MAXTEMP}$
 
 // If your bed has low resistance e.g. .6 ohm and throws the fuse you can duty cycle it to reduce the
@@ -460,8 +567,7 @@ ${:end-for}$
 //===========================================================================
 
 // Uncomment the following line to enable CoreXY kinematics
-// #define COREXY
-
+${emit(comment(KINEMATIC_CONFIG==1))}$ #define COREXY
 // coarse Endstop Settings
 #define ENDSTOPPULLUPS // Comment this out (using // at the start of the line) to disable the endstop pullup resistors
 
@@ -476,21 +582,21 @@ ${:end-for}$
 #endif
 
 #ifdef ENDSTOPPULLUPS
-  #define ENDSTOPPULLUP_XMAX
-  #define ENDSTOPPULLUP_YMAX
-  #define ENDSTOPPULLUP_ZMAX
-  #define ENDSTOPPULLUP_XMIN
-  #define ENDSTOPPULLUP_YMIN
-  #define ENDSTOPPULLUP_ZMIN
+  ${emit(comment(ENDSTOPPULLUP_XMAX))}$ #define ENDSTOPPULLUP_XMAX
+  ${emit(comment(ENDSTOPPULLUP_YMAX))}$ #define ENDSTOPPULLUP_YMAX
+  ${emit(comment(ENDSTOPPULLUP_ZMAX))}$ #define ENDSTOPPULLUP_ZMAX
+  ${emit(comment(ENDSTOPPULLUP_XMIN))}$ #define ENDSTOPPULLUP_XMIN
+  ${emit(comment(ENDSTOPPULLUP_YMIN))}$ #define ENDSTOPPULLUP_YMIN
+  ${emit(comment(ENDSTOPPULLUP_ZMIN))}$ #define ENDSTOPPULLUP_ZMIN
 #endif
 
 // The pullups are needed if you directly connect a mechanical endswitch between the signal and ground pins.
-const bool X_MIN_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
-const bool Y_MIN_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
-const bool Z_MIN_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
-const bool X_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
-const bool Y_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
-const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of the endstop.
+const bool X_MIN_ENDSTOP_INVERTING = ${emit(cbool(X_MIN_ENDSTOP_INVERTING))}$; // set to true to invert the logic of the endstop.
+const bool Y_MIN_ENDSTOP_INVERTING = ${emit(cbool(Y_MIN_ENDSTOP_INVERTING))}$; // set to true to invert the logic of the endstop.
+const bool Z_MIN_ENDSTOP_INVERTING = ${emit(cbool(Z_MIN_ENDSTOP_INVERTING))}$; // set to true to invert the logic of the endstop.
+const bool X_MAX_ENDSTOP_INVERTING = ${emit(cbool(X_MAX_ENDSTOP_INVERTING))}$; // set to true to invert the logic of the endstop.
+const bool Y_MAX_ENDSTOP_INVERTING = ${emit(cbool(Y_MAX_ENDSTOP_INVERTING))}$; // set to true to invert the logic of the endstop.
+const bool Z_MAX_ENDSTOP_INVERTING = ${emit(cbool(Z_MAX_ENDSTOP_INVERTING))}$; // set to true to invert the logic of the endstop.
 //#define DISABLE_MAX_ENDSTOPS
 //#define DISABLE_MIN_ENDSTOPS
 
@@ -500,40 +606,39 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 #endif
 
 // For Inverting Stepper Enable Pins (Active Low) use 0, Non Inverting (Active High) use 1
-#define X_ENABLE_ON 0
-#define Y_ENABLE_ON 0
-#define Z_ENABLE_ON 0
+#define X_ENABLE_ON ${emit(int(X_ENABLE_ON))}$
+#define Y_ENABLE_ON ${emit(int(Y_ENABLE_ON))}$
+#define Z_ENABLE_ON ${emit(int(Z_ENABLE_ON))}$
 #define E_ENABLE_ON 0 // For all extruders
 
 // Disables axis when it's not being used.
-#define DISABLE_X false
-#define DISABLE_Y false
-#define DISABLE_Z false
+#define DISABLE_X ${emit(cbool(DISABLE_X))}$
+#define DISABLE_Y ${emit(cbool(DISABLE_Y))}$
+#define DISABLE_Z ${emit(cbool(DISABLE_Z))}$
 #define DISABLE_E false // For all extruders
 
-#define INVERT_X_DIR true    // for Mendel set to false, for Orca set to true
-#define INVERT_Y_DIR false    // for Mendel set to true, for Orca set to false
-#define INVERT_Z_DIR true     // for Mendel set to false, for Orca set to true
-#define INVERT_E0_DIR false   // for direct drive extruder v9 set to true, for geared extruder set to false
-#define INVERT_E1_DIR false    // for direct drive extruder v9 set to true, for geared extruder set to false
-#define INVERT_E2_DIR false   // for direct drive extruder v9 set to true, for geared extruder set to false
+#define INVERT_X_DIR ${emit(cbool(INVERT_X_DIR))}$    // for Mendel set to false, for Orca set to true
+#define INVERT_Y_DIR ${emit(cbool(INVERT_Y_DIR))}$    // for Mendel set to true, for Orca set to false
+#define INVERT_Z_DIR ${emit(cbool(INVERT_Z_DIR))}$     // for Mendel set to false, for Orca set to true
+${for i in range(EXTRUDERS):}$ #define INVERT_E${i}$_DIR ${emit(cbool(INVERT_E_DIR[i]))}$
+${:end-for}$
 
 // ENDSTOP SETTINGS:
 // Sets direction of endstops when homing; 1=MAX, -1=MIN
-#define X_HOME_DIR -1
-#define Y_HOME_DIR -1
-#define Z_HOME_DIR -1
+#define X_HOME_DIR ${emit(1 if X_HOME_DIR else -1)}$
+#define Y_HOME_DIR ${emit(1 if Y_HOME_DIR else -1)}$
+#define Z_HOME_DIR ${emit(1 if Z_HOME_DIR else -1)}$
 
-#define min_software_endstops true // If true, axis won't move to coordinates less than HOME_POS.
-#define max_software_endstops true  // If true, axis won't move to coordinates greater than the defined lengths below.
+#define min_software_endstops ${emit(cbool(MIN_SOFTWARE_ENDSTOPS))}$  // If true, axis won't move to coordinates less than HOME_POS.
+#define max_software_endstops ${emit(cbool(MAX_SOFTWARE_ENDSTOPS))}$   // If true, axis won't move to coordinates greater than the defined lengths below.
 
 // Travel limits after homing
-#define X_MAX_POS 205
-#define X_MIN_POS 0
-#define Y_MAX_POS 205
-#define Y_MIN_POS 0
-#define Z_MAX_POS 200
-#define Z_MIN_POS 0
+#define X_MAX_POS ${X_MAX_POS}$
+#define X_MIN_POS ${X_MIN_POS}$
+#define Y_MAX_POS ${Y_MAX_POS}$
+#define Y_MIN_POS ${Y_MIN_POS}$
+#define Z_MAX_POS ${Z_MAX_POS}$
+#define Z_MIN_POS ${Z_MIN_POS}$
 
 #define X_MAX_LENGTH (X_MAX_POS - X_MIN_POS)
 #define Y_MAX_LENGTH (Y_MAX_POS - Y_MIN_POS)
@@ -641,7 +746,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 //#define MANUAL_Z_HOME_POS 402 // For delta: Distance between nozzle and print surface after homing.
 
 //// MOVEMENT SETTINGS
-#define NUM_AXIS 4 // The axis order in all axis related arrays is X, Y, Z, E
+#define NUM_AXIS ${emit(3+EXTRUDERS)}$ // The axis order in all axis related arrays is X, Y, Z, E
 #define HOMING_FEEDRATE {50*60, 50*60, 4*60, 0}  // set the homing speeds (mm/min)
 
 // default settings

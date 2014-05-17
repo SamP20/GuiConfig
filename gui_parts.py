@@ -307,7 +307,7 @@ class RealInput(GenericPart):
     def build_gui(self, parent_ctrl):
         self._title = wx.StaticText(parent_ctrl, label=self.title.value,
                                     size=(180, -1))
-        self._input = wx.SpinCtrlDouble(parent_ctrl, value=self.text, style=wx.TE_PROCESS_ENTER,
+        self._input = wx.SpinCtrlDouble(parent_ctrl, style=wx.TE_PROCESS_ENTER,
                                   min=int(self.min.value), max=int(self.max.value))
         self._input.SetDigits(2)
         self._label = wx.StaticText(parent_ctrl, label=self.label.value)
