@@ -26,7 +26,13 @@ def load_defaults():
         "DISABLE_Z": False,
         "X_ENABLE_ON": False,
         "Y_ENABLE_ON": False,
-        "Z_ENABLE_ON": False
+        "Z_ENABLE_ON": False,
+        "X_STEPS_PER_MM": 78.7402,
+        "Y_STEPS_PER_MM": 78.7402,
+        "Z_STEPS_PER_MM": 533.3333,
+        "X_MM_PER_S": 500.0,
+        "Y_MM_PER_S": 500.0,
+        "Z_MM_PER_S": 5.0,
     })
     #Endstops
     vstore.instance.update({
@@ -57,6 +63,7 @@ def load_defaults():
         "HEATER_MAXTEMP": [],
         "INVERT_E_DIR": [],
         "E_STEPS_PER_MM": [],
+        "E_MM_PER_S": [],
     })
     
     #Heated bed
@@ -78,6 +85,7 @@ def load_extruder(key, count):
         vs["HEATER_MAXTEMP"].append(275)
         vs["INVERT_E_DIR"].append(False)
         vs["E_STEPS_PER_MM"].append(836.0)
+        vs["E_MM_PER_S"].append(25.0)
 
         
 def load_gui():
@@ -180,6 +188,16 @@ def axes_page():
             GP.CheckInput("Invert Y", "INVERT_Y_DIR"),
             GP.CheckInput("Invert Z", "INVERT_Z_DIR"),
         ),
+        GP.OptionsGroup("Steps/mm").add_children(
+            GP.RealInput("X steps/mm", "X_STEPS_PER_MM", min=0.0, max=1000.0),
+            GP.RealInput("Y steps/mm", "Y_STEPS_PER_MM", min=0.0, max=1000.0),
+            GP.RealInput("Z steps/mm", "Z_STEPS_PER_MM", min=0.0, max=1000.0),
+        ),
+        GP.OptionsGroup("Maximum feedrate").add_children(
+            GP.RealInput("X mm/s", "X_MM_PER_S", min=0.0, max=1000.0),
+            GP.RealInput("Y mm/s", "Y_MM_PER_S", min=0.0, max=1000.0),
+            GP.RealInput("Z mm/s", "Z_MM_PER_S", min=0.0, max=1000.0),
+        ),
         GP.OptionsGroup("Axis sleep").add_children(
             GP.CheckInput("Disable X", "DISABLE_X", tooltip="Disable X axis when not in use"),
             GP.CheckInput("Disable Y", "DISABLE_Y", tooltip="Disable Y axis when not in use"),
@@ -238,6 +256,7 @@ def extruders_page():
             ),
             GP.OptionsGroup("Extruder motor").add_children(
                 GP.RealInput("Steps per mm", extruder_var("E_STEPS_PER_MM"), min=0.0, max=1000.0),
+                GP.RealInput("Maximum feedrate", extruder_var("E_MM_PER_S"), label="mm/s", min=0.0, max=1000.0),
                 GP.CheckInput("Invert extruder direction", extruder_var("INVERT_E_DIR"))
             )
         ),
@@ -750,9 +769,14 @@ ${:end-for}$
 #define HOMING_FEEDRATE {50*60, 50*60, 4*60, 0}  // set the homing speeds (mm/min)
 
 // default settings
-
-#define DEFAULT_AXIS_STEPS_PER_UNIT   {78.7402,78.7402,200.0*8/3,760*1.1}  // default steps per unit for Ultimaker
-#define DEFAULT_MAX_FEEDRATE          {500, 500, 5, 25}    // (mm/sec)
+#define DEFAULT_AXIS_STEPS_PER_UNIT {${X_STEPS_PER_MM}$, ${Y_STEPS_PER_MM}$, ${Z_STEPS_PER_MM}$${
+for i in range(EXTRUDERS):
+    emit(", %f" % E_STEPS_PER_MM[i])
+}$}
+#define DEFAULT_MAX_FEEDRATE {${X_MM_PER_S}$, ${Y_MM_PER_S}$, ${Z_MM_PER_S}$${
+for i in range(EXTRUDERS):
+    emit(", %f" % E_MM_PER_S[i])
+}$}
 #define DEFAULT_MAX_ACCELERATION      {9000,9000,100,10000}    // X, Y, Z, E maximum start speed for accelerated moves. E default values are good for Skeinforge 40+, for older versions raise them a lot.
 
 #define DEFAULT_ACCELERATION          3000    // X, Y, Z and E max acceleration in mm/s^2 for printing moves

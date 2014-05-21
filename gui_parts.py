@@ -324,7 +324,7 @@ class RealInput(GenericPart):
         self.tooltip.add_handler(lambda val:
                                  self._input.SetToolTip(wx.ToolTip(val) if val else None), True)
 
-        self._input.Bind(wx.EVT_SPINCTRL, self.on_value_changed)
+        self._input.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_value_changed)
         self.on_value_changed(None) #Set initial defaults
         return self._sizer
 
